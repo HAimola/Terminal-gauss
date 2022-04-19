@@ -1,0 +1,4 @@
+Makefile
+term.o
+term.c
+.vscode/
