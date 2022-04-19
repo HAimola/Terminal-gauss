@@ -6,18 +6,6 @@
 template<typename T>
 class Matrix{
     private:
-    /*
-        size_t _find_biggest_line_size(){
-            size_t big_s = 0;
-            for(auto i: data){
-                if(i.size() > big_s){
-                    big_s = i.size();
-                }
-            }
-            return big_s;
-        }
-        
-    */
 
     void swap_lowest_error(size_t col, Matrix<T> coef){
         size_t biggest_el_index{};
@@ -76,21 +64,6 @@ class Matrix{
     void append(std::vector<T> vec){
         data.push_back(vec);
     }
-/*
-    void append_at(size_t i, size_t j, T item, bool restrict_shape = false){
-        if(!restrict_shape){
-            size_t cur_lines = data.size();
-            size_t cur_cols = _find_biggest_line_size();
-
-            if(cur_lines > i && cur_cols > j){
-                data[i][j] = item; 
-            }else{
-
-            }
-            
-        }
-    }
-*/
 
     inline void clear(){
         data.clear();
@@ -100,23 +73,7 @@ class Matrix{
         data.resize(new_shape[0], std::vector<T>{0});
         for(auto &line: data) line.resize(new_shape[1], 0);
     }
-/*
-    void truncate_vec(){
-        for(auto vec: data){
-            if(vec.size() != data[0].size()){
-                vec.resize(data[0].size());
-            }
-        }
-    }
-
-    std::vector<int> get_line_shape(){
-        std::vector<int> shape_vec;
-        for(auto line: data){
-            shape_vec.push_back((int)line.size());
-        }
-        return shape_vec;
-    }
-*/
+    
     std::array<int, 2> get_shape(){
         shape[0] = (int)data.size();
         shape[1] = (int)data[0].size();

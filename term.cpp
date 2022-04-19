@@ -20,8 +20,8 @@ struct Vec2{
 
 class UI{
     private:
-        int _m_height{};
-        int _m_width{};
+        int _m_height{}; // Dimensoes da janela da matriz
+        int _m_width{};  // Funcao inline _update_m_dims atualiza esse valor
         bool editting_cell{};
 
         void _highlight_mode(){
@@ -48,9 +48,23 @@ class UI{
             getmaxyx(m_window, _m_height, _m_width);
         }
 
+
+        // Adiciona a a ponta do colchetes do desenho da matriz
         inline void _add_underline(int i = UNDERLINE_COUNT){
             for (int j = 0; j < i; ++j) waddch(m_window, ACS_HLINE);
         } 
+
+        // Desenha a linha entre os coeficientes e termos indep.
+        void _draw_dashed_line(int x){
+            _update_m_dims();
+            wattron(m_window, A_ALTCHARSET);
+            for(int i = 1; i < _m_height; i+= 2){
+                wmove(m_window, i, x);
+                waddch(m_window, ACS_VLINE);
+            }
+            wattroff(m_window, A_ALTCHARSET);
+            wrefresh(m_window);
+        }
 
         void _draw_matrix_borders(Matrix<float> m, int y = 0, int x = 0){
             std::array<int, 2> sh = m.get_shape();
@@ -94,7 +108,9 @@ class UI{
 
                 for(int i = 0; i < sh[0]; ++i){
                     for(int j = 0; j < sh[1]; j++){
+                        if(i == sh[0] - 1 && j == sh[1] - 1) _draw_dashed_line((j)*x_spacing);
                         wmove(m_window, (i)*y_spacing+1, (j)*x_spacing+2);
+
                         if(el_cursor.y == i && el_cursor.x == j) wattron(m_window, A_BOLD | A_UNDERLINE | COLOR_PAIR(2));
                         wprintw(m_window, "%.5g", m.data[i][j]);
                         wrefresh(m_window);
@@ -106,7 +122,7 @@ class UI{
         void _draw_input_prompt(std::string s){
             wclear(input_window);
             _update_input_header();
-            wmove(input_window, 0, 20);
+            wmove(input_window, 0, 13);
             waddstr(input_window, s.c_str());
             wrefresh(input_window);
         }
@@ -130,9 +146,9 @@ class UI{
 
         void _dec_y_el_cursor(int dec = 1){
             el_cursor.y -= dec;
-            if(edit_mode){
-                if(el_cursor.y < 0) el_cursor.y = m.shape[0] - 1;
-            }else{
+            if(el_cursor.y < 0) el_cursor.y = m.shape[0] - 1;
+
+            if(!edit_mode){
                 on_button = true;
             }
         }
@@ -149,8 +165,7 @@ class UI{
         WINDOW *input_window;
         WINDOW *button_window;
 
-        Vec2 el_cursor{}; // element-wise cursor
-        Vec2 ch_cursor{}; // character-wise cursor
+        Vec2 el_cursor{}; // Cursor de elementos
         std::string buffer{}; // Input number buffer
         Matrix<float> m; // Matrix
 
@@ -160,7 +175,7 @@ class UI{
             int maxX, maxY;
             getmaxyx(stdscr, maxY, maxX);
 
-            // Draw initial header
+            // Header
             header_window = newwin(2, 50, 0, 0);
             wattron(header_window, A_BOLD | A_UNDERLINE);
             waddstr(header_window, "Programa de calculo de matrizes ----- GRUPO 2");
@@ -168,7 +183,7 @@ class UI{
             waddstr(header_window, "Matriz de INPUT");
             wrefresh(header_window);
 
-            // Draw control header
+            // Box com o modo (mov_mode ou edit_mode) 
             control_window = newwin(3, maxX, maxY-3, 0);
             wattron(control_window, A_ALTCHARSET);
             wborder(control_window, ACS_VLINE, ACS_VLINE, ACS_HLINE, ACS_HLINE, 
@@ -177,19 +192,16 @@ class UI{
             wattroff(control_window, A_ALTCHARSET);
             _highlight_mode();
             
-            // Draw Warning window
+            // warning_window fica na mesma linha q control header
             warning_window = newwin(1, maxX, maxY-2, 45);
             wattron(warning_window, COLOR_PAIR(1));
             wattron(warning_window, A_INVIS);
 
             draw_matrix(this->m);
 
-            ch_cursor.x = 20;
             input_window = newwin(2, 40, _m_height+3, 0);
             wattron(input_window, A_INVIS);
             wmove(input_window, 0, 0);
-
-            
 
         }
 
@@ -207,31 +219,22 @@ class UI{
                     _dec_y_el_cursor();
                 }
             }
-
             if(editting_cell) _update_input_header();
-            if(!edit_mode) _draw_elements(m);
+            _draw_elements(m);
         }
 
         inline void prev_element(bool row = false){
             next_element(row, -1);
         }
 
-        void next_char(){
-            
-        }
-
-        void prev_char(){
-
-        }
-
         void enter_signal(){
             _update_m_dims();
 
             if(edit_mode){
-                if(!editting_cell){
-                    wattroff(input_window, A_INVIS);
-                    _update_input_header();
+                if(!editting_cell){ // Se nao estiver editando celula
                     editting_cell = true;
+                    wattroff(input_window, A_INVIS); // Mostra input_window
+                    _update_input_header();
                     wclear(warning_window);
                     wrefresh(warning_window);
                 }else{
@@ -239,10 +242,10 @@ class UI{
                     editting_cell = false;
                     float cell_val{};
                     if(buffer.size() > 0){
-                        try{
+
+                        try{ // Tenta parsear input em float
                             cell_val = std::stof(buffer);
-                        }catch(std::invalid_argument const &e){
-                            std::cout << e.what();
+                        }catch(std::invalid_argument const &e){ // Se der errado, ativa warning_window
                             wmove(warning_window, 0, 0);
                             waddstr(warning_window, "IMPOSSIVEL CONVERTER TEXTO PARA NUMERO DECIMAL!");
                             wattroff(warning_window, A_INVIS);
@@ -276,7 +279,6 @@ class UI{
 
         void addch_atcursor(int ch_raw){
             if(edit_mode && editting_cell){
-                ++ch_cursor.x;
                 buffer.append(1, char(ch_raw));
                 _draw_input_prompt(buffer);
             }
@@ -284,7 +286,6 @@ class UI{
 
         void rmch_atcursor(){
             if(edit_mode && editting_cell){ 
-                --ch_cursor.x;
                 if(buffer.size() > 0) buffer.pop_back();
                 _draw_input_prompt(buffer);
             }
@@ -294,6 +295,24 @@ class UI{
             _draw_matrix_borders(m, y, x);
             _draw_elements(m);
             wrefresh(m_window);
+        }
+
+        void x_expand(){
+            if(el_cursor.x == m.shape[1]-1){
+                m.fill_with_zeros({(size_t)m.shape[0],(size_t)m.shape[1]+1});
+                m.get_shape();
+                draw_matrix(m);
+            }
+            next_element();
+        }
+
+        void y_expand(){
+             if(el_cursor.y == m.shape[0]-1){
+                m.fill_with_zeros({(size_t)m.shape[0]+1,(size_t)m.shape[1]});
+                m.get_shape();
+                draw_matrix(m);
+            }
+            next_element(true);
         }
 };
 
@@ -317,6 +336,7 @@ int main(){
     UI ui{};
 
     int ch_raw = 0;
+    [[maybe_unused]] bool command = false;
     bool quit = false;
 
     while(!quit){
@@ -331,37 +351,32 @@ int main(){
         else if(ch_raw == KEY_ENTER || ch_raw == 10) ui.enter_signal();
         else if(ch_raw == 27) ui.mov_mode();
         
-        // Mov mode
-        if(!ui.edit_mode){
-            if(ch_raw == KEY_RIGHT || ch_raw == '\t') ui.next_element();
-            else if (ch_raw == KEY_LEFT) ui.prev_element();
-            else if(ch_raw == KEY_UP) ui.prev_element(true);
-            else if(ch_raw == KEY_DOWN) ui.next_element(true);
-        // Edit mode
-        }else{
-            if(ch_raw == '\t') ui.next_element(); // TAB
-            if(ch_raw == KEY_BACKSPACE) ui.rmch_atcursor();
-            else if(ch_raw == KEY_LEFT) ui.next_char();
-            else if (ch_raw == KEY_RIGHT) ui.prev_char();
-            else if(ch_raw == KEY_UP) ui.prev_element(true);
-            else if(ch_raw == KEY_DOWN) ui.next_element(true);
-        }
+        if(ch_raw == KEY_RIGHT || ch_raw == '\t') ui.next_element();
+        else if (ch_raw == KEY_LEFT) ui.prev_element();
+        else if(ch_raw == KEY_UP) ui.prev_element(true);
+        else if(ch_raw == KEY_DOWN) ui.next_element(true);
+        else if(ch_raw == KEY_BACKSPACE) ui.rmch_atcursor();
 
         // If the char is 0-9 or the decimal point
-        if(ui.edit_mode && ((ch_raw >=48 && ch_raw <= 57) || ch_raw == 46 || ch_raw == 45 ||
+        else if(ui.edit_mode && ((ch_raw >=48 && ch_raw <= 57) || ch_raw == 46 || ch_raw == 45 ||
             ch_raw == 43)) ui.addch_atcursor(ch_raw);
 
         // CTRL Chars
-        const char* c_ch = unctrl(ch_raw);
-        if(c_ch[0] == '^'){
-            if(c_ch[1] == 'X') quit = true;
+        std::string c_ch = keyname(ch_raw); // Intermediate represen. from ncruses
+        if(c_ch == "kRIT5") ui.x_expand(); // Ctrl + rigth arrow
+        else if(c_ch == "kDN5") ui.y_expand(); // Ctrl + down arrow
+        else if(c_ch == "^X") quit = true;  // Ctrl + X
+    
+        // Alt Chars TODO (kLFT3 -> Alt + left) (kUP3 -> Alt + up)
 
-            // COPIA COLA
-        }
     }
+
     delwin(ui.header_window);
     delwin(ui.m_window);
     delwin(ui.control_window);
+    delwin(ui.warning_window);
+    delwin(ui.button_window);
+    delwin(ui.input_window);
     endwin();
 
 }
