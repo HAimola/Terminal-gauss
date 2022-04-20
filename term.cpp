@@ -66,7 +66,7 @@ class UI{
             wrefresh(m_window);
         }
 
-        void _draw_matrix_borders(Matrix<float> m, int y = 0, int x = 0){
+        void _draw_matrix_borders(Matrix<double> m, int y = 0, int x = 0){
             std::array<int, 2> sh = m.get_shape();
             _m_height = ELEMENT_SPACING*sh[0] + sh[0];
             _m_width = SIDE_SPACING*(sh[1]+1) + sh[1];
@@ -99,12 +99,12 @@ class UI{
             wattroff(m_window, A_ALTCHARSET);
         }
 
-        void _draw_elements(Matrix<float> m){
+        void _draw_elements(Matrix<double> m){
                 std::array<int, 2> sh = m.get_shape();
                 _update_m_dims();
                 
-                int y_spacing = (int)std::ceil((((float)_m_height-2)/(float)sh[0])); 
-                int x_spacing = (int)std::ceil((((float)_m_width-2)/(float)sh[1]));
+                int y_spacing = (int)std::ceil((((double)_m_height-2)/(double)sh[0])); 
+                int x_spacing = (int)std::ceil((((double)_m_width-2)/(double)sh[1]));
 
                 for(int i = 0; i < sh[0]; ++i){
                     for(int j = 0; j < sh[1]; j++){
@@ -167,7 +167,7 @@ class UI{
 
         Vec2 el_cursor{}; // Cursor de elementos
         std::string buffer{}; // Input number buffer
-        Matrix<float> m; // Matrix
+        Matrix<double> m; // Matrix
 
         // Default Constructor
         UI(): edit_mode(0), m{{2, 3}}{
@@ -199,7 +199,7 @@ class UI{
 
             draw_matrix(this->m);
 
-            input_window = newwin(2, 40, _m_height+3, 0);
+            input_window = newwin(2, 40, _m_height+10, 0);
             wattron(input_window, A_INVIS);
             wmove(input_window, 0, 0);
 
@@ -240,10 +240,10 @@ class UI{
                 }else{
 
                     editting_cell = false;
-                    float cell_val{};
+                    double cell_val{};
                     if(buffer.size() > 0){
 
-                        try{ // Tenta parsear input em float
+                        try{ // Tenta parsear input em double
                             cell_val = std::stof(buffer);
                         }catch(std::invalid_argument const &e){ // Se der errado, ativa warning_window
                             wmove(warning_window, 0, 0);
@@ -291,7 +291,8 @@ class UI{
             }
         }
 
-        void draw_matrix(Matrix<float> m, int y = 0, int x = 0){
+        void draw_matrix(Matrix<double> m, int y = 0, int x = 0){
+            
             _draw_matrix_borders(m, y, x);
             _draw_elements(m);
             wrefresh(m_window);
@@ -299,7 +300,7 @@ class UI{
 
         void x_expand(){
             if(el_cursor.x == m.shape[1]-1){
-                m.fill_with_zeros({(size_t)m.shape[0],(size_t)m.shape[1]+1});
+                m.fill_with_zeros({m.shape[0],m.shape[1]+1});
                 m.get_shape();
                 draw_matrix(m);
             }
@@ -308,7 +309,7 @@ class UI{
 
         void y_expand(){
              if(el_cursor.y == m.shape[0]-1){
-                m.fill_with_zeros({(size_t)m.shape[0]+1,(size_t)m.shape[1]});
+                m.fill_with_zeros({m.shape[0]+1,m.shape[1]});
                 m.get_shape();
                 draw_matrix(m);
             }
@@ -356,6 +357,10 @@ int main(){
         else if(ch_raw == KEY_UP) ui.prev_element(true);
         else if(ch_raw == KEY_DOWN) ui.next_element(true);
         else if(ch_raw == KEY_BACKSPACE) ui.rmch_atcursor();
+        else if(ch_raw == 'k'){
+            ui.draw_matrix(ui.m.gauss_elimination(), 0, 70);
+            ui.draw_matrix(ui.m);
+        }
 
         // If the char is 0-9 or the decimal point
         else if(ui.edit_mode && ((ch_raw >=48 && ch_raw <= 57) || ch_raw == 46 || ch_raw == 45 ||
